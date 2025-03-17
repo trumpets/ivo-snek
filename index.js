@@ -12,6 +12,10 @@
 
 import runServer from './server.js';
 import chalk from 'chalk';
+import checkBoundaries from './boundaryChecker.js';
+import checkSelfCollision from './selfCollisionChecker.js';
+import checkOpponentCollisions from './opponentCollisionChecker.js';
+import { findClosestFood, getMoveTowardsFood } from './foodSeeker.js';
 
 // info is called when you create your Battlesnake on play.battlesnake.com
 // and controls your Battlesnake's appearance
@@ -70,7 +74,7 @@ function printBoard(board) {
 // Valid moves are "up", "down", "left", or "right"
 // See https://docs.battlesnake.com/api/example-move for available data
 function move(gameState) {
-  printBoard(gameState.board);
+  // printBoard(gameState.board);
 
   let isMoveSafe = {
     up: true,
@@ -96,15 +100,30 @@ function move(gameState) {
     isMoveSafe.up = false;
   }
 
-  // TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
-  // boardWidth = gameState.board.width;
-  // boardHeight = gameState.board.height;
+  // Step 1 - Prevent Battlesnake from moving out of bounds
+  const boundaryMoves = checkBoundaries(myHead, gameState.board.width, gameState.board.height);
 
-  // TODO: Step 2 - Prevent your Battlesnake from colliding with itself
-  // myBody = gameState.you.body;
+  // Combine boundary checks with existing safe moves
+  Object.keys(boundaryMoves).forEach(move => {
+    if (!boundaryMoves[move]) isMoveSafe[move] = false;
+  });
 
-  // TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
-  // opponents = gameState.board.snakes;
+  // Step 2 - Prevent your Battlesnake from colliding with itself
+  const selfCollisionMoves = checkSelfCollision(myHead, gameState.you.body);
+
+  // Combine self-collision checks with existing safe moves
+  Object.keys(selfCollisionMoves).forEach(move => {
+    if (!selfCollisionMoves[move]) isMoveSafe[move] = false;
+  });
+
+  // Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
+  const opponents = gameState.board.snakes.filter(snake => snake.id !== gameState.you.id);
+  const opponentCollisionMoves = checkOpponentCollisions(myHead, opponents);
+
+  // Combine opponent collision checks with existing safe moves
+  Object.keys(opponentCollisionMoves).forEach(move => {
+    if (!opponentCollisionMoves[move]) isMoveSafe[move] = false;
+  });
 
   // Are there any safe moves left?
   const safeMoves = Object.keys(isMoveSafe).filter(key => isMoveSafe[key]);
@@ -113,11 +132,12 @@ function move(gameState) {
     return { move: "down" };
   }
 
-  // Choose a random move from the safe moves
-  const nextMove = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+  // Step 4 - Move towards food instead of random 
+  const closestFood = findClosestFood(myHead, gameState.board.food);
+  const foodMove = getMoveTowardsFood(myHead, closestFood, safeMoves);
 
-  // TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
-  // food = gameState.board.food;
+  // Use food-seeking move if available, otherwise choose random safe move
+  const nextMove = foodMove || safeMoves[Math.floor(Math.random() * safeMoves.length)];
 
   console.log(`MOVE ${gameState.turn}: ${nextMove}`)
   return { move: nextMove };
