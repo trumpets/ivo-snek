@@ -11,6 +11,7 @@
 // For more info see docs.battlesnake.com
 
 import runServer from './server.js';
+import chalk from 'chalk';
 
 // info is called when you create your Battlesnake on play.battlesnake.com
 // and controls your Battlesnake's appearance
@@ -20,10 +21,10 @@ function info() {
 
   return {
     apiversion: "1",
-    author: "",       // TODO: Your Battlesnake Username
+    author: "Ivo",       // TODO: Your Battlesnake Username
     color: "#888888", // TODO: Choose color
-    head: "default",  // TODO: Choose head
-    tail: "default",  // TODO: Choose tail
+    head: "all-seeing",  // TODO: Choose head
+    tail: "weight",  // TODO: Choose tail
   };
 }
 
@@ -37,10 +38,39 @@ function end(gameState) {
   console.log("GAME OVER\n");
 }
 
+function printBoard(board) {
+  // uncomment if you like to observe debug data
+  // console.log(board.food);
+  // console.log(board.snakes[0].body);
+
+  const boardState = new Map();
+  board.snakes.forEach(snake => {
+    snake.body.forEach(segment => boardState.set(segment.x + "," + segment.y, "S"))
+  });
+  board.food.forEach(food => boardState.set(food.x + "," + food.y, "F"));
+
+  for (let y = board.height - 1; y >= 0; y--) {
+    for (let x = 0; x < board.width; x++) {
+      // clean code, but andreas us wants us to use CHALK :)
+      // process.stdout.write(boardState.get(x + "," + y) || '.');
+      const cell = boardState.get(x + "," + y);
+      if (cell === 'F') {
+        process.stdout.write(chalk.bold.red('F'));
+      } else if (cell === 'S') {
+        process.stdout.write(chalk.bold.blue('S'));
+      } else {
+        process.stdout.write(chalk.bgWhite('.'));
+      }
+    }
+    process.stdout.write('\n');
+  }
+}
+
 // move is called on every turn and returns your next move
 // Valid moves are "up", "down", "left", or "right"
 // See https://docs.battlesnake.com/api/example-move for available data
 function move(gameState) {
+  printBoard(gameState.board);
 
   let isMoveSafe = {
     up: true,
